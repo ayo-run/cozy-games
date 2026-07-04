@@ -1,0 +1,42 @@
+{
+  "name": "cozy-games",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cozy Games monorepo — apps, shared packages, and sites",
+  "author": "Ayo Ayco",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ayo-run/mnswpr"
+  },
+  "homepage": "https://mnswpr.com",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "pnpm -F mnswpr dev",
+    "test:watch": "vitest",
+    "build:lib": "vite build packages/mnswpr",
+    "publish:lib": "node scripts/publish-lib.js",
+    "release": "pnpm build:lib && pnpm -F @ayo-run/mnswpr run release && pnpm publish:lib",
+    "postinstall": "node scripts/ensure-java.mjs",
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "scan:secrets": "secretlint --secretlintignore .secretlintignore \"**/*\""
+  },
+  "devDependencies": {
+    "@eslint/css": "^1.1.0",
+    "@eslint/js": "^10.0.1",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "bumpp": "^11.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
+    "secretlint": "^13.0.2",
+    "simple-git": "^3.33.0",
+    "vite": "^8.0.3",
+    "vitest": "^4.1.9"
+  },
+  "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b"
+}
