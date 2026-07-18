@@ -2,24 +2,21 @@
   "name": "cozy-games",
   "version": "0.0.1",
   "private": true,
-  "description": "Cozy Games monorepo — apps, shared packages, and sites",
+  "description": "Cozy Games — shared, reusable packages for small browser games",
   "author": "Ayo Ayco",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ayo-run/mnswpr"
+    "url": "https://github.com/ayo-run/cozy-games"
   },
-  "homepage": "https://mnswpr.com",
   "scripts": {
     "test": "vitest run",
-    "dev": "pnpm -F mnswpr dev",
     "test:watch": "vitest",
     "build": "pnpm build:types && pnpm -r --filter \"./packages/*\" run build",
     "build:types": "node scripts/build-types.mjs",
     "build:lib": "vite build packages/mnswpr",
     "publish:lib": "node scripts/publish-lib.js",
     "release": "pnpm build:lib && pnpm -F @cozy-games/mnswpr run release && pnpm publish:lib",
-    "postinstall": "node scripts/ensure-java.mjs",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
