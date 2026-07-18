@@ -425,7 +425,7 @@ appear in `core/` outside the injected `clock`/`rng` seams.
 
 ## 11. Open decisions
 
-- **Package boundary:** ✅ *resolved* — one `@cozy-games/mnswpr` package, core at the
+- **Package boundary:** *resolved* — one `@cozy-games/mnswpr` package, core at the
   `./core` sub-path (§1). Extraction to `@cozy-games/grid` + `@cozy-games/game-session`
   deferred to when Sudoku lands; the sub-path stays stable across that move.
 - **Host mode (replay-validation vs live authority):** *deferred.* Ship
