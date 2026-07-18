@@ -6,23 +6,22 @@ Shared, reusable packages that power small browser games — extracted from
 
 # Roadmap
 
-- Stabilize the public APIs: game-agnostic modules for core, move-log, replay,
-  leaderboard, and rating.
-- Add a second game to validate those APIs through the adapter alone.
-- Extract the proven modules into standalone, versioned packages.
-- Freeze the adapter contract so third-party games can build against it.
+- **Public APIs** — game-agnostic modules (core, move-log, replay, leaderboard, rating).
+- **Second Game** — validate those APIs by adding a second game through the adapter alone.
+- **Reusable Packages** — extract proven modules into standalone, versioned packages.
+- **Adapters** — freeze the adapter contract for third-party games to build against.
 
 ## Packages
 
 | Package              | Develop        | Publish                    |
 | -------------------- | -------------- | -------------------------- |
-| `mnswpr` (game core) | Built          | @cozy-games/mnswpr         |
-| leaderboard          | Built          | @cozy-games/leaderboard    |
-| move-log             | Built          | @cozy-games/move-log       |
-| replay engine        | Built          | not yet published          |
-| utils                | Built          | @cozy-games/utils          |
-| rating math          | In development | not yet published          |
-| `sudoku` (game core) | Planned        | not yet published          |
+| `mnswpr` (game core) | ✅ Built       | ✅ @cozy-games/mnswpr      |
+| leaderboard          | ✅ Built       | ✅ @cozy-games/leaderboard |
+| move-log             | ✅ Built       | ✅ @cozy-games/move-log    |
+| replay engine        | ✅ Built       |                            |
+| utils                | ✅ Built       | ✅ @cozy-games/utils       |
+| rating math          | 🚧 Development |                            |
+| `sudoku` (game core) | 🔮 Planned     |                            |
 
 > The mnswpr game app itself lives in its own repo:
 > [ayo-run/mnswpr](https://github.com/ayo-run/mnswpr).

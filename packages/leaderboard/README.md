@@ -59,7 +59,7 @@ tab `labels`, `emptyMessages`, `loadingText`, `errorText`, `anonymousName` — i
 option, so you pass your translated copy (from `<cozy-leaderboard>` use it via
 `configureLeaderboard({ ... })`). The package only ships English defaults.
 
-**Full reference:** every option, the web-component attributes/properties,
+📖 **Full reference:** every option, the web-component attributes/properties,
 adapters, i18n, and precedence rules are documented in
 [CONFIGURATION.md](./CONFIGURATION.md).
 
