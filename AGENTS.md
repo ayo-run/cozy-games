@@ -77,13 +77,12 @@ Node version: `.nvmrc` pins `lts/*`.
 
 ## Repository layout (Cozy Games monorepo, pnpm workspace)
 
-This is the **Cozy Games** monorepo. Workspaces are declared in `pnpm-workspace.yaml` as `apps/*`, `packages/*`, and `sites/*`. `utils/` is now a real workspace package (`@cozy-games/utils`), imported by name — no more `../utils` relative paths.
+This is the **Cozy Games** monorepo. Workspaces are declared in `pnpm-workspace.yaml` as `apps/*` and `packages/*`. `utils/` is now a real workspace package (`@cozy-games/utils`), imported by name — no more `../utils` relative paths.
 
 - **`apps/mnswpr/`** — package `mnswpr`, `@cozy-games/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@cozy-games/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/` and its `package.json` `name` is just the app name (`<name>`, unscoped) so it's addressable directly by name (`pnpm -F <name> run <script>`).
 - **`packages/mnswpr/`** — `@cozy-games/mnswpr`, the standalone, framework-free game engine published to npm. `packages/mnswpr/mnswpr.js` is the whole engine; `levels.js` defines the four difficulty presets. Depends only on `@cozy-games/utils`.
 - **`packages/leaderboard/`** — `@cozy-games/leaderboard`, a backend-agnostic, time-windowed leaderboard (adapter-injected storage).
 - **`packages/utils/`** — `@cozy-games/utils`, shared services with no dependencies, re-exported from `index.js`: `StorageService`, `TimerService` (`pretty()` time formatting used by both engine and leaderboard), `LoggerService`, `LoadingService`, and date-bucket helpers.
-- **`sites/`** — docs (Astro Starlight) and UI demos. Placeholders for now.
 
 ## Architecture
 

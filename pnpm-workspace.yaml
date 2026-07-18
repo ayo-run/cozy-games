@@ -1,6 +1,5 @@
 packages:
   - "packages/*"
-  - "sites/*"
 allowBuilds:
   '@firebase/util': false
   '@parcel/watcher': false
