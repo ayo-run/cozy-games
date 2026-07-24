@@ -1,123 +1,151 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in this repository.
+Guidance for all AI coding AGENTS working in this repository.
 
 ## What this is
 
-Classic Minesweeper as a vanilla web game — no framework, no TypeScript (JSDoc + `// @ts-check` only). Deployed at [mnswpr.com](https://mnswpr.com) (Netlify) and published to npm as `@cozy-games/mnswpr`. The game engine has **zero runtime dependencies**; only the website adds Firebase.
+**Cozy Games** — a pnpm workspace of small, framework-free, publishable `@cozy-games/*`
+packages that power browser games. **This repo is libraries only.** The playable
+mnswpr *website/app* (Firebase, Netlify, `apps/`) was extracted to its own repo,
+[ayo-run/mnswpr](https://github.com/ayo-run/mnswpr) — so there is **no `apps/`
+directory, no Firebase/Netlify infra, and no dev/deploy scripts here**, despite
+what older `CONTRIBUTING.md` sections still say (they carry stale app-era content;
+trust the code and this file over them).
 
-**`mnswpr` is the main test app.** It's the reference app for the monorepo and the default target for local runs — `.claude/launch.json` launches it (`dev` on :5173, `preview` on :4173), and it's what you should build/run/preview when verifying changes to the shared packages or tooling.
+Everything is vanilla JS — no framework, no TypeScript source: `// @ts-check` +
+JSDoc only. The game core and utils have **zero runtime dependencies**.
 
 ## Commands
 
-Workspace-wide commands run from the root; per-app commands target the app by name with pnpm's `-F` filter (apps are named `<name>` — there are no mnswpr-specific root scripts).
+All commands run from the repo root (pnpm is required — npm/yarn will not work):
 
 ```bash
-pnpm i              # install (pnpm is required — this is a pnpm workspace)
-pnpm test           # run the Vitest suite once (jsdom)
-pnpm test:watch     # run Vitest in watch mode
-pnpm lint           # eslint . (JS + CSS); runs automatically on pre-commit
-pnpm lint:fix       # eslint --fix
-pnpm build:lib      # build the publishable library -> packages/mnswpr/dist
-
-pnpm -F mnswpr run dev            # Firestore emulator + auto-seed + dev server (emulators:exec) — most common; needs JDK 21+
-pnpm -F mnswpr run dev:no-db      # plain vite, no emulator (UI-only work / no JDK)
-pnpm -F mnswpr run build          # build the website -> apps/mnswpr/dist
-pnpm -F mnswpr run build:preview  # build the app and serve the production preview
+pnpm i               # install
+pnpm test            # run the whole Vitest suite once (jsdom)
+pnpm test:watch      # Vitest in watch mode
+pnpm lint            # eslint . (lints **/*.js AND **/*.css); runs on pre-commit
+pnpm lint:fix        # eslint --fix
+pnpm build           # build:types, then build every package (pnpm -r)
+pnpm build:types     # regenerate committed .d.ts from JSDoc (scripts/build-types.mjs)
+pnpm build:lib       # build just the publishable mnswpr engine -> packages/mnswpr/dist
 ```
 
-### Infra (local CLI only — no web dashboards)
-
-**Every infra operation — provision, deploy hosting, deploy DB, manage env — is doable from the CLI, and every configuration/schema is codified in-repo.** Nothing lives only in a web dashboard. There are two distinct layers, both owned by the app:
-
-**1. App infra *config* — declarative, committed, deployed state.** These files ARE the source of truth; deploying just pushes them up. For `mnswpr`, all under `apps/mnswpr/`:
-
-| File | Codifies |
-| --- | --- |
-| `firebase.json` | Firestore + emulator wiring (rules/indexes paths, emulator ports) |
-| `.firebaserc` | Firebase project aliases (`default`/`prod`/`dev`) |
-| `firestore.rules` | Firestore security rules (server-side access control) |
-| `firestore.indexes.json` | Firestore indexes (none needed — documented inline) |
-| `netlify.toml` | Netlify hosting: build command, publish dir, redirects, headers, build env |
-| `.env.example` | The full env-var contract; real prod values are set as Netlify env vars via CLI, never committed |
-
-**2. App infra *tools* — the CLIs that act on that config.** They are versioned **devDependencies** of the app (not `npx`-on-demand, not global installs), so `pnpm install` pins them and every machine gets the same version. `mnswpr` depends on `firebase-tools` and `netlify-cli`; its scripts call the `firebase`/`netlify` binaries directly (pnpm puts the app's `node_modules/.bin` on `PATH`). A future app using a different stack (Postgres, a different host) declares *its* CLIs as *its* devDependencies and backs the same generic script names — so `pnpm -F <name> run deploy:db` stays uniform.
-
-Each app **owns its infra scripts** in its own `package.json` under generic, tech-agnostic names (`deploy:db`, not `deploy:firestore`) — run them by targeting the app with pnpm's `-F` filter (no root wrapper scripts):
+Run a single test file / test by name:
 
 ```bash
-pnpm -F mnswpr run db:start      # local DB emulator (mnswpr -> Firestore), standalone
-pnpm -F mnswpr run db:seed       # seed the running local emulator
-pnpm -F mnswpr run db:stop       # kill a stray/orphaned Firestore emulator holding :8080
-pnpm -F mnswpr run deploy:db     # deploy DB rules/indexes (-> firebase deploy --only firestore)
-pnpm -F mnswpr run deploy:site   # build + deploy hosting (-> netlify deploy --prod --dir=dist)
+pnpm test packages/mnswpr/test/<file>.test.js     # one file
+pnpm test -t "chording reveals neighbors"         # by test name (substring)
 ```
 
-**One-time per app / per machine (all CLI, no dashboard):**
+There is **no app to run** in this repo. For anything visual/input-timing you must
+verify by playing, do it in the separate mnswpr app repo. Node version is pinned
+by `.nvmrc` (`lts/*`).
 
-```bash
-pnpm -F mnswpr exec firebase login             # auth the Firebase CLI
-pnpm -F mnswpr exec netlify login              # auth the Netlify CLI
-pnpm -F mnswpr exec netlify link               # bind the app dir to its Netlify site (writes .netlify/, gitignored)
-```
+## Packages (workspace = `packages/*` only)
 
-**Managing hosting env vars via CLI** (keeps prod Firebase keys + `VITE_LB_NAMESPACE=mw` out of git while still reproducible):
+- **`@cozy-games/mnswpr`** (`packages/mnswpr/`) — the standalone Minesweeper engine,
+  published to npm. Split into a **headless core** and a **DOM client** (see
+  Architecture). `mnswpr.js` is the browser default entry (`.`); the core is the
+  `./core` sub-path of the *same* package (not a second published package).
+- **`@cozy-games/leaderboard`** (`packages/leaderboard/`) — a backend-agnostic,
+  time-windowed leaderboard shipped as a **web component** (`web-component-base`),
+  with storage injected via **adapters** in `adapters/` (`firebase`,
+  `firebase-admin`, `supabase`). `firebase` is a peer dependency.
+- **`@cozy-games/move-log`** (`packages/move-log/`) — a game-agnostic, schema-versioned
+  container for an ordered stream of move events (`{ seq, clientTs, type, payload }`).
+  It never inspects a `payload`. This is the interchange format between the engine
+  and replay.
+- **`@cozy-games/replay`** (`packages/replay/`) — a game-agnostic replay engine.
+  `PlaybackClock` re-drives a move-log envelope over time (`play`/`pause`/`seek`),
+  interpreting nothing itself; a game **adapter** supplies `progress(events) → %`.
+  Currently `private` (unpublished).
+- **`@cozy-games/utils`** (`packages/utils/`) — zero-dependency shared services,
+  re-exported from `index.js`: `StorageService`, `TimerService` (`pretty()` time
+  formatting), `LoggerService`, `LoadingService`, and date-bucket helpers.
 
-```bash
-pnpm -F mnswpr exec netlify env:set VITE_LB_NAMESPACE mw   # set one var
-pnpm -F mnswpr exec netlify env:import .env.production      # bulk-import from a local (gitignored) env file
-pnpm -F mnswpr exec netlify env:list                       # inspect what's set
-```
-
-**Non-npm tools get a setup script instead of a devDependency.** The Firestore emulator needs **Java** (it's a JVM program), which isn't an npm package — so `pnpm install` runs a root `postinstall` (`scripts/ensure-java.mjs`) that installs a user-local Temurin JRE 21 into `~/.local` without `sudo` when `java` is missing — idempotent, non-fatal, and auto-skipped on `CI` / `SKIP_JRE_SETUP` / unsupported platforms. Any future infra tool that isn't on npm follows the same pattern (a checked-in setup script), never a manual install step.
-
-Tests are co-located with the package they exercise (`packages/utils/test/`, `packages/mnswpr/test/`) and run under **Vitest** with a jsdom environment (root config in `vitest.config.js`). They cover the shared utils and drive the engine through real DOM events (mount `#app`, dispatch mouse events, assert on cell/grid attributes). For anything visual or input-timing related, also verify by running `pnpm -F mnswpr run dev` and playing.
-
-Node version: `.nvmrc` pins `lts/*`.
-
-## Repository layout (Cozy Games monorepo, pnpm workspace)
-
-This is the **Cozy Games** monorepo. Workspaces are declared in `pnpm-workspace.yaml` as `apps/*` and `packages/*`. `utils/` is now a real workspace package (`@cozy-games/utils`), imported by name — no more `../utils` relative paths.
-
-- **`apps/mnswpr/`** — package `mnswpr`, `@cozy-games/mnswpr`'s host, the mnswpr.com website. Consumes the engine and leaderboard via `workspace:*` (`import mnswpr from '@cozy-games/mnswpr/mnswpr.js'`) and wires them together in `apps/mnswpr/main.js`. Owns its Firebase config (`firebase.json`, `firestore.rules`, `.firebaserc`) and app-specific scripts (`apps/mnswpr/scripts/`). A future app (e.g. sudoku) gets its own `apps/<name>/` and its `package.json` `name` is just the app name (`<name>`, unscoped) so it's addressable directly by name (`pnpm -F <name> run <script>`).
-- **`packages/mnswpr/`** — `@cozy-games/mnswpr`, the standalone, framework-free game engine published to npm. `packages/mnswpr/mnswpr.js` is the whole engine; `levels.js` defines the four difficulty presets. Depends only on `@cozy-games/utils`.
-- **`packages/leaderboard/`** — `@cozy-games/leaderboard`, a backend-agnostic, time-windowed leaderboard (adapter-injected storage).
-- **`packages/utils/`** — `@cozy-games/utils`, shared services with no dependencies, re-exported from `index.js`: `StorageService`, `TimerService` (`pretty()` time formatting used by both engine and leaderboard), `LoggerService`, `LoadingService`, and date-bucket helpers.
+Packages import each other by name via `workspace:*` (e.g. `@cozy-games/utils`), never
+by relative path across package boundaries.
 
 ## Architecture
 
-**The engine is decoupled from the app via two hooks.** `Minesweeper(appId, version, hooks)` (`packages/mnswpr/mnswpr.js`) is a classic constructor function that imperatively builds a `<table>` grid in the DOM. It knows nothing about Firebase or leaderboards. The app injects behavior through:
+**Read the design docs and ADRs before large changes.** The intended structure and
+the reasoning are recorded, not just implied:
+- `packages/mnswpr/docs/headless-core-and-client-design.md` — the core/client split.
+- `docs/decisions/` — ADRs: `0001-package-boundary`, `0002-game-adapter-pattern`,
+  `0003-stored-boards-not-seeds`.
 
-- `hooks.levelChanged(setting)` — fired when the difficulty level changes; the app uses this to re-fetch and render the leaderboard for that level.
-- `hooks.gameDone(game)` — fired when a game ends (win or loss) with a `game` object (`time`, `status`, `level`, `time_stamp`, `isMobile`); the app uses this to submit the score.
+**mnswpr = headless core + thin DOM client.** The engine is deliberately split so the
+same logic runs in a browser (offline play) or on an authoritative host (server-side
+timing / replay verification):
 
-When adding engine features that the website needs to react to, prefer adding a new hook over reaching into the app — that separation is what keeps the library publishable on its own. (There are already `TODO` markers in the engine for an `afterGridGenerated` hook.)
+- **`core/`** — headless, isomorphic, **zero DOM, zero wall-clock**. Internally
+  layered so the generic bottom can later be lifted into `@cozy-games/grid` +
+  `@cozy-games/game-session` once a second game exists to validate it. `core/index.js`
+  is the public barrel:
+  - `core/grid/` (Layer 0) — generic `Grid`, neighbor strategies (`eightWay`,
+    `orthogonal`), serialize.
+  - `core/session/` (Layer 1) — `GameSession` (lifecycle, injected clock, move log),
+    seedable PRNG (`mulberry32`), `replay()` validation.
+  - `core/minesweeper/` (Layer 2) — `MinesweeperRules`, deterministic board gen with
+    first-click safety (`board.js`), flood-fill + chording (`reveal.js`).
+- **`client/`** — DOM internals that consume the core: `renderer.js` (the **only**
+  place `document` is touched — events → DOM) and `transport.js` (`LocalTransport`).
+- **`mnswpr.js`** — the DOM client entry. It still holds the **intricate input state
+  machine** inline (mouse left/right/middle + left+right "chording", touch long-press
+  to flag), debounced by `isBusy` (`MOBILE_BUSY_DELAY`/`PC_BUSY_DELAY`). This is
+  deliberately not yet extracted and is under-tested — **tread carefully; small
+  changes easily break chording or mobile flagging**. `levels.js` holds the four
+  difficulty presets, shared by client and core.
 
-**Game state lives in DOM attributes, not a JS model.** The grid's overall state is the `game-status` attribute on the `<table>` (`inactive` → `active` → `over`/`win` → `done`). Each cell carries `data-status` (`default`, `highlighted`, `flagged`, `clicked`, `empty`) and `data-value` (adjacent mine count). Mine positions are the one exception: kept in `minesArray` as `[row, col]` pairs. When changing game logic, read/write these attributes consistently — helpers like `getStatus`/`setStatus`, `isMine`, `isFlagged` are the intended accessors.
+**The engine is decoupled from any app via two hooks.** `Minesweeper(appId, version,
+hooks, options)` injects app behavior through `hooks.levelChanged(setting)` and
+`hooks.gameDone(game)`. When adding engine features an app needs to react to, add a
+new hook rather than reaching outward — that separation is what keeps the package
+publishable on its own. `options.seed` pins a deterministic board (tests/replay).
 
-**First-click safety:** the first clicked cell is never a mine — if it is, `transferMine()` relocates it to a non-neighboring empty cell before revealing.
+**Test mode:** set `TEST_MODE = true` at the top of `packages/mnswpr/mnswpr.js` to
+render mine positions as visual hints and enable debug logging.
 
-**Input handling is intricate.** Mouse (left/right/middle, plus simultaneous left+right "chording") and touch (long-press to flag) are handled through a state machine of flags (`isLeft`, `isRight`, `pressed`, `bothPressed`, `skip`, `isBusy`) in `initializeEventHandlers`/`initializeTouchEventHandlers`. `isBusy` debounces input (`MOBILE_BUSY_DELAY`/`PC_BUSY_DELAY`). Tread carefully here — small changes easily break chording or mobile flagging.
-
-**Test mode:** set `TEST_MODE = true` at the top of `packages/mnswpr/mnswpr.js` to render mine positions as visual hints and enable debug logging.
-
-## Leaderboard / Firebase (`apps/mnswpr/modules/`)
-
-`LeaderBoardService` (`leader-board.js`) reads/writes Firestore (`firebase/firestore/lite`). Structure: top-10 per level in `mw-leaders/{level}/games`, all sessions in `mw-all/{browserId}/games`, and remote runtime `configuration` in `mw-config`. A score is only offered to the leaderboard when it beats the current 10th place *and* matches the server-side `passingStatus`.
-
-The **Firebase config in `leader-board.js` is intentionally public and committed** — for a client-only Firebase app the API key is not a secret (access is governed by Firestore security rules), so don't treat it as a leaked credential or try to move it to env vars.
-
-`UserService` (`user.js`) derives a non-cryptographic `browserId` fingerprint from navigator/screen properties to attribute scores without accounts.
+**Game/replay data flow:** engine move events → `@cozy-games/move-log` envelope →
+`@cozy-games/replay` `PlaybackClock`. The move-log and replay engine are strictly
+game-agnostic; anything game-specific is confined to an **adapter** (see ADR-002 and
+`packages/mnswpr/adapters/` — `replay-common`, `replay-progress`, `replay-state`).
 
 ## Conventions
 
-- **Code style is enforced by ESLint Stylistic**, not Prettier: 2-space indent, single quotes, **no semicolons**, no trailing commas, spaces inside `{ braces }` but not `[brackets]`. Run `pnpm lint:fix` before committing. Both `**/*.js` and `**/*.css` are linted (CSS via `@eslint/css`).
-- The engine uses **plain functions and `var`/`let` closures**, not classes; `packages/utils/` and `apps/mnswpr/modules/` use ES classes. Match the surrounding style of the file you edit.
-- **Content policy.** Commit messages, branch names, PR text, and contributed lines are checked by `scripts/check-content.mjs` (hooks + the `Checks` workflow) against `.repo-policy.json`. Write commit messages in plain project voice; no tool-attribution trailers or footers, no `Co-Authored-By:` line for a non-human contributor (the policy's `toolCoAuthors` list — human co-authors are always fine), no session links.
-- The same scanner matches text against a maintainer-managed reserved-terms list. Findings report a location and a masked preview, never the term. If one flags your change, reword it or ask a maintainer — don't edit `.repo-policy.json`.
-- **Types are generated, not authored.** Source stays JS + JSDoc (`// @ts-check`); `tsc` is a build-time tool that emits `.d.ts` from that JSDoc so published `@cozy-games/*` packages ship types. Declarations are emitted **co-located** next to each source file and **committed** — `pnpm build:types` (`scripts/build-types.mjs`) deletes the previous ones and re-runs `tsc -p tsconfig.types.json`, since TypeScript won't emit over an existing `.d.ts` (TS5055). The type-check runs `strict: false` and covers only the files named in that config's `include` list — adding a new published source file means adding it there, or it ships without types. After touching JSDoc on an included file, run `pnpm build:types` and commit the regenerated declarations.
+- **Style is ESLint Stylistic, not Prettier:** 2-space indent, single quotes, **no
+  semicolons**, no trailing commas, spaces inside `{ braces }` but not `[brackets]`.
+  Both `**/*.js` and `**/*.css` are linted (CSS via `@eslint/css`). Run `pnpm lint:fix`
+  before committing.
+- **Match the file you edit:** the engine uses plain functions and `var`/`let`
+  closures; `packages/utils/` uses ES classes.
+- **Types are generated, not authored.** Source is JS + JSDoc (`// @ts-check`). `tsc`
+  emits `.d.ts` co-located next to each source file, and those declarations are
+  **committed**. After changing JSDoc on a published file, run `pnpm build:types` and
+  commit the regenerated `.d.ts`. A new published source file only ships types if it's
+  added to `tsconfig.types.json`'s `include` list.
 
-## Release & git hooks (maintainer workflow)
+## Content policy (enforced — will block commits/CI)
 
-- **Husky hooks:** `pre-commit` runs `pnpm lint`, the secret scan, and the content check (staged diff + branch name); `commit-msg` runs the content check over the message; `post-commit` auto-pushes to two extra remotes (`git push gh`, `git push sh`). If those remotes aren't configured locally, expect post-commit failures — that's environmental, not a code problem.
-- **Releasing** (`pnpm release`) builds the lib, runs `bumpp` (version bump + tag) in `packages/mnswpr/`, then `scripts/release.js` force-pushes a `release` branch and tags to remotes `gh`/`sh`. Pushing a `v*` tag triggers `.github/workflows/release.yml` (`changelogithub`) to publish GitHub release notes. Only run this when explicitly releasing.
+Commit messages, branch names, PR text, and contributed lines are scanned by
+`scripts/check-content.mjs` (git hooks + the `Checks` workflow) against
+`.repo-policy.json`:
+- Write commit messages in plain project voice (conventional prefixes: `feat:`,
+  `fix:`, `chore:`, …). **No AI-tool attribution trailers/footers**, no
+  `Co-Authored-By:` for a non-human contributor (human co-authors are fine), no
+  session links.
+- The scanner also matches a maintainer-managed **reserved-terms list**; findings
+  report a location + masked preview, never the term. If flagged, reword — **do not
+  edit `.repo-policy.json`**, or ask a maintainer. For legitimate prose *about* these
+  topics, a `content-policy: allow-next-line` comment above the line is the escape
+  hatch.
+
+## Git hooks & release (maintainer workflow)
+
+- **Husky:** `pre-commit` runs `pnpm lint` + secret scan (`secretlint`) + the content
+  check; `commit-msg` runs the content check over the message; **`post-commit`
+  auto-pushes to extra remotes (`git push gh`, `git push sh`)** — if those remotes
+  aren't configured locally, post-commit failures are environmental, not a code
+  problem.
+- **Release** (`pnpm release`, maintainers only) builds the lib, runs `bumpp` in
+  `packages/mnswpr/`, then publishes. Only run when explicitly releasing.
